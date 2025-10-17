@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify, send_from_directory
-from models.usuario import Usuario
-from tools.jwt_utils import generar_token
-from tools.jwt_required import jwt_token_requerido
-from tools.security import password_validate
+from ..models.usuario import Usuario
+from ..tools.jwt_utils import generar_token
+from ..tools.jwt_required import jwt_token_requerido
+from ..tools.security import password_validate
 import os
 from werkzeug.utils import secure_filename
 

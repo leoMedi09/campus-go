@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from models.reserva import Reserva
-from tools.jwt_required import jwt_token_requerido
+from ..models.reserva import Reserva
+from ..tools.jwt_required import jwt_token_requerido
 from datetime import datetime
 
 #Crear un modulo blueprint para implementar el servicio web de reservas

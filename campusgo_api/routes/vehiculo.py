@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from models.vehiculo import Vehiculo
-from tools.jwt_required import jwt_token_requerido
+from ..models.vehiculo import Vehiculo
+from ..tools.jwt_required import jwt_token_requerido
 
 #Crear un modulo blueprint para implementar el servicio web de usuario (login, cambiar clave, registrar, etc)
 ws_vehiculo = Blueprint('ws_vehiculo', __name__)
