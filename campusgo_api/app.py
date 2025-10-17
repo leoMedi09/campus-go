@@ -53,6 +53,37 @@ def health_db():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
+@app.route('/__debug__routes_env', methods=['GET'])
+def debug_routes_env():
+    """Temporary debug endpoint (remove after debugging):
+    Returns the list of registered routes and a safe summary of DB_* env vars.
+    Does NOT expose full secret values — values are masked or reported as present/absent.
+    """
+    def mask(v: str) -> str:
+        if v is None:
+            return None
+        if len(v) <= 6:
+            return '***'
+        return v[:3] + '...' + v[-3:]
+
+    routes = []
+    for rule in app.url_map.iter_rules():
+        routes.append({'rule': str(rule), 'methods': sorted(list(rule.methods))})
+
+    db_env = {}
+    for k, v in os.environ.items():
+        if k.startswith('DB_'):
+            # Mask value to avoid leaking secrets; include length to know presence
+            db_env[k] = {'present': True, 'masked': mask(v), 'length': len(v)}
+
+    # Ensure we report common flags even if not set
+    for name in ('DB_USE_SSL', 'DB_SSL_CA_B64', 'DB_SSL_CA_PATH', 'DB_HOST', 'DB_USER', 'DB_NAME'):
+        if name not in db_env:
+            db_env[name] = {'present': False}
+
+    return jsonify({'routes': routes, 'db_env': db_env}), 200
+
+
 #Iniciar el servicio web con Flask (solo para desarrollo local)
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3006))
