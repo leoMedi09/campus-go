@@ -14,6 +14,24 @@ app.register_blueprint(ws_vehiculo)
 app.register_blueprint(ws_reserva)
 
 
+# Log registered routes and DB_* env presence at startup so they appear in Render logs.
+def _mask(v: str) -> str:
+    if v is None:
+        return None
+    if len(v) <= 6:
+        return '***'
+    return v[:3] + '...' + v[-3:]
+
+try:
+    routes_list = [str(r) for r in app.url_map.iter_rules()]
+    print('STARTUP: Registered routes:', routes_list)
+    db_info = {k: {'present': True, 'masked': _mask(os.environ.get(k)), 'len': len(os.environ.get(k) or '')}
+               for k in os.environ.keys() if k.startswith('DB_')}
+    print('STARTUP: DB env summary:', db_info)
+except Exception as _e:
+    print('STARTUP: route logging failed', str(_e))
+
+
 @app.route('/')
 def home():
     return 'CampusGO - Running API Restful'
