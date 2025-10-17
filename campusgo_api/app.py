@@ -84,6 +84,21 @@ def debug_routes_env():
     return jsonify({'routes': routes, 'db_env': db_env}), 200
 
 
+@app.route('/__version__', methods=['GET'])
+def version():
+    """Return the contents of DEPLOY_VERSION if present (helpful to know which commit is live)."""
+    try:
+        base = os.path.dirname(__file__)
+        path = os.path.join(base, '..', 'DEPLOY_VERSION')
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                v = f.read().strip()
+            return jsonify({'version': v}), 200
+    except Exception:
+        pass
+    return jsonify({'version': 'unknown'}), 200
+
+
 #Iniciar el servicio web con Flask (solo para desarrollo local)
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3006))

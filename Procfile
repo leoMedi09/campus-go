@@ -1,0 +1,1 @@
+web: gunicorn campusgo_api.app:app --workers 2 --bind 0.0.0.0:$PORT
