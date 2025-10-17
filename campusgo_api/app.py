@@ -7,6 +7,8 @@ import urllib.request
 import socket
 import os
 from .conexionBD import Conexion
+import uuid
+import datetime
 
 app = Flask(__name__)
 app.register_blueprint(ws_usuario)
@@ -28,8 +30,22 @@ try:
     db_info = {k: {'present': True, 'masked': _mask(os.environ.get(k)), 'len': len(os.environ.get(k) or '')}
                for k in os.environ.keys() if k.startswith('DB_')}
     print('STARTUP: DB env summary:', db_info)
+    # Generate a live token to confirm which build is running
+    deploy_ver = None
+    try:
+        base = os.path.dirname(__file__)
+        path = os.path.join(base, '..', 'DEPLOY_VERSION')
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                deploy_ver = f.read().strip()
+    except Exception:
+        deploy_ver = None
+
+    LIVE_TOKEN = f"{deploy_ver or 'noversion'}-{uuid.uuid4().hex[:8]}-{datetime.datetime.utcnow().strftime('%y%m%d%H%M%S')}"
+    print('STARTUP: LIVE_TOKEN=', LIVE_TOKEN)
 except Exception as _e:
     print('STARTUP: route logging failed', str(_e))
+
 
 
 @app.route('/')
@@ -126,6 +142,29 @@ def version():
     except Exception:
         pass
     return jsonify({'version': 'unknown'}), 200
+
+
+@app.route('/__i_am_live__', methods=['GET'])
+def i_am_live():
+    """Return the live token printed at startup (non-secret, for debugging only)."""
+    try:
+        base = os.path.dirname(__file__)
+        path = os.path.join(base, '..', 'DEPLOY_VERSION')
+        dv = None
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                dv = f.read().strip()
+    except Exception:
+        dv = None
+
+    token = f"{dv or 'noversion'}-unknown"
+    # Try to read LIVE_TOKEN printed at import-time if present in module globals
+    try:
+        token = globals().get('LIVE_TOKEN', token)
+    except Exception:
+        pass
+
+    return jsonify({'live_token': token}), 200
 
 
 #Iniciar el servicio web con Flask (solo para desarrollo local)
