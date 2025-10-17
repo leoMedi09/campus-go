@@ -1,0 +1,8 @@
+flask
+gunicorn
+argon2-cffi
+PyJWT
+werkzeug
+pymysql
+python-dotenv
+boto3
