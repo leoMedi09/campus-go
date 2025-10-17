@@ -1,7 +1,8 @@
 from flask import Flask
-from routes.usuario import ws_usuario
-from routes.vehiculo import ws_vehiculo
-from routes.reserva import ws_reserva
+# Use package-relative imports so the app can be loaded by gunicorn
+from .routes.usuario import ws_usuario
+from .routes.vehiculo import ws_vehiculo
+from .routes.reserva import ws_reserva
 import os
 
 app = Flask(__name__)
