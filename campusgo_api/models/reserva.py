@@ -1,4 +1,4 @@
-from .conexionBD import Conexion
+from ..conexionBD import Conexion
 
 class Reserva:
     def registrar(self, pasajero_id, fecha_reserva, observacion, detalles_viaje):

@@ -1,4 +1,4 @@
-from .conexionBD import Conexion
+from ..conexionBD import Conexion
 
 class Vehiculo:
        
