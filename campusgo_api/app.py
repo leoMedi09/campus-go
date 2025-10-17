@@ -34,6 +34,17 @@ except Exception as _e:
 
 @app.route('/')
 def home():
+    # Return a short message including DEPLOY_VERSION when available so we can
+    # detect which commit is live on Render.
+    try:
+        base = os.path.dirname(__file__)
+        path = os.path.join(base, '..', 'DEPLOY_VERSION')
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                v = f.read().strip()
+            return f'CampusGO - Running API Restful (version: {v})'
+    except Exception:
+        pass
     return 'CampusGO - Running API Restful'
 
 
