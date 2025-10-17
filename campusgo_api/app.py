@@ -6,6 +6,7 @@ from .routes.reserva import ws_reserva
 import urllib.request
 import socket
 import os
+from .conexionBD import Conexion
 
 app = Flask(__name__)
 app.register_blueprint(ws_usuario)
@@ -37,6 +38,19 @@ def whoami():
             ip = f'error: {str(e)}'
 
     return jsonify({'ip': ip})
+
+
+@app.route('/health-db', methods=['GET'])
+def health_db():
+    """Simple health check that tries to open a DB connection and run SELECT 1."""
+    try:
+        db = Conexion()
+        cur = db.open.cursor()
+        cur.execute('SELECT 1 as ok')
+        row = cur.fetchone()
+        return jsonify({'ok': True, 'result': row}), 200
+    except Exception as e:
+        return jsonify({'ok': False, 'error': str(e)}), 500
 
 
 #Iniciar el servicio web con Flask (solo para desarrollo local)
