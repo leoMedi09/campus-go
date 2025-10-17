@@ -3,7 +3,7 @@ pymysql.install_as_MySQLdb()
 
 import MySQLdb as dbc
 import MySQLdb.cursors
-from config import Config
+from .config import Config
 
 
 class Conexion:
