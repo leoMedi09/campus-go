@@ -4,9 +4,17 @@ class Reserva:
     def registrar(self, pasajero_id, fecha_reserva, observacion, detalles_viaje):
 
         try:
+            # Inicializar recursos
+            con = None
+            cursor = None
+
             # 1. Abrir la conexión
             con = Conexion().open
             cursor = con.cursor()
+
+            # Validaciones básicas de entrada
+            if not detalles_viaje or not isinstance(detalles_viaje, (list, tuple)):
+                raise Exception("detalles_viaje debe ser una lista con al menos un detalle de viaje.")
 
             # 2. Insertar en la tabla de reserva
             sql_reserva = """
@@ -29,33 +37,36 @@ class Reserva:
                 UPDATE viaje SET asientos_disponibles = asientos_disponibles - 1
                 WHERE id = %s AND asientos_disponibles > 0;
             """
-            # 5. Iterar en el json array, el cual trae los viajes selecionados por el pasajero 
-
+            # 5. Iterar en el json array y validar antes de ejecutar cambios
             for detalle in detalles_viaje:
                 viaje_id = detalle.get("viaje_id")
                 estado_id = detalle.get("estado_id")
+                fecha_viaje = detalle.get("fecha_viaje")
+
+                # Validar viaje_id
+                try:
+                    if viaje_id is None:
+                        raise ValueError("viaje_id es obligatorio")
+                    viaje_id_int = int(viaje_id)
+                except Exception:
+                    raise Exception(f"El viaje con el ID {viaje_id} no es válido.")
+
+                if viaje_id_int <= 0:
+                    raise Exception(f"El viaje con el ID {viaje_id} no es válido.")
+
+                # (Ejercicio) validar fecha_viaje si se necesita (ejemplo: no aceptamos fechas vacías)
+                # if not fecha_viaje:
+                #     raise Exception(f"La fecha del viaje para el viaje {viaje_id} es obligatoria.")
 
                 # 5.1 Reducir el número de asientos disponibles
-                cursor.execute(sql_actualizar_viaje, [viaje_id])
+                cursor.execute(sql_actualizar_viaje, [viaje_id_int])
 
                 # Verificar si se actualizó algún registro (es decir si habían asientos disponibles)
                 if cursor.rowcount == 0:
-                    raise Exception(f"No hay asientos disponibles para el viaje con ID {viaje_id}")
-                     
+                    raise Exception(f"No hay asientos disponibles para el viaje con ID {viaje_id_int}")
+
                 # 5.2 Insertar en la tabla reserva_viaje
-                cursor.execute(sql_reserva_viaje, [reserva_id, viaje_id, estado_id])
-
-
-            # 5.3 (Ejercicios)
-            for detalle in detalles_viaje:
-                viaje_id = detalle.get("viaje_id")
-
-                # (Ejercicio) Verificar si el viaje_id ingresado es válido
-                if not viaje_id or viaje_id <= 0:
-                    raise Exception(f"El viaje con el ID {viaje_id} no es válido.")
-
-                # (Ejercicio) #Validar que la fecha de reserva coincida con la fecha del viaje seleccionado
-                fecha_reserva = detalle.get("fecha_viaje")
+                cursor.execute(sql_reserva_viaje, [reserva_id, viaje_id_int, estado_id])
           
 
 
@@ -66,15 +77,27 @@ class Reserva:
     
         except Exception as e:
             # 8. En caso de ocurra un error hacer rollback y abortar la transacción
-            con.rollback()
-        
+            if con:
+                try:
+                    con.rollback()
+                except Exception:
+                    pass
+
             # 9 . Retornar el error específico
             return False, f"Error al registrar la reserva: {str(e)}"
-        
+
         finally:
-            # 10. Cerrar el cursor y la conexión
-            cursor.close()
-            con.close()
+            # 10. Cerrar el cursor y la conexión de forma segura
+            try:
+                if cursor:
+                    cursor.close()
+            except Exception:
+                pass
+            try:
+                if con:
+                    con.close()
+            except Exception:
+                pass
           
     #Hacer una cancelación de reserva de un pasajero solo si se hace con mínimo 1 hora de anticipación, además que no se haya embarcado
     
