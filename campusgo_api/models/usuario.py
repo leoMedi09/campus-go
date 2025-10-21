@@ -15,7 +15,7 @@ class Usuario:
         cursor = con.cursor()
         
         #Definir la sentencia sql
-        sql = "select id, concat(nombres, ' ', apellido_paterno, ' ', apellido_materno, ' ', nombres) as nombre_completo, email, clave from usuario where email = %s"
+        sql = "select id, concat(nombres, ' ', apellido_paterno, ' ', apellido_materno, ' ', nombres) as nombre, email, clave from usuario where email = %s"
         
         #Ejecutar la sentencia
         cursor.execute(sql,[email])
