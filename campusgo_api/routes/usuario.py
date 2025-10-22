@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify, send_from_directory
 from ..models.usuario import Usuario
+import logging
+pkg_logger = logging.getLogger('campusgo_api')
 from ..tools.jwt_utils import generar_token
 from ..tools.jwt_required import jwt_token_requerido
 from ..tools.security import password_validate
@@ -16,37 +18,40 @@ usuario = Usuario()
 #Crear un endpoint para permitir al usuario iniciar sesión(login)
 @ws_usuario.route('/login', methods=['POST'])
 def login():
+    #Obtener los datos que se envian como parámetros de entrada
     data = request.get_json()
+    
+    #pasar los datos de email y clave a variables
     email = data.get('email')
     clave = data.get('clave')
-
+    
+    #Validar si contamos con los parámetros de email y clave
     if not all([email, clave]):
         return jsonify({'status': False, 'data': None, 'message': 'Faltan datos obligatorios'}), 400
-
-    # === INICIO DEL CAMBIO IMPORTANTE ===
+    
     try:
-        # Llamamos al método login del modelo como antes
+        #Llamar al método login
         resultado = usuario.login(email, clave)
         
-        if resultado:
-            # Comprobamos si el modelo nos devolvió un error controlado (ej. contraseña incorrecta)
-            if resultado.get('error'):
-                 return jsonify({'status': False, 'data': None, 'message': resultado.get('error')}), 401
-
-            # Si todo fue bien, generamos el token
+        if resultado: #Si hay resultado
+            #retirar la clave del resultado antes de imprimir
             resultado.pop('clave', None)
-            token = generar_token({"usuario_id": resultado['id']}, 60*60)
+            
+            #Generar el token con JWT
+            token = generar_token({'usuario_id': resultado['id']}, 60*60)
+            
+            #Incliuir en el resultado el token generado
             resultado['token'] = token
             
+            #Imprimir el resultado
             return jsonify({'status': True, 'data': resultado, 'message':'Inicio de sesión satisfactorio'}), 200
         
-        else: # Si el resultado es None, significa que el usuario no se encontró
-            return jsonify({'status': False, 'data': None, 'message': 'Credenciales incorrectas o usuario no encontrado.'}), 401
-
+        else:
+            return jsonify({'status': False, 'data': None, 'message': 'Credenciales incorrectas'}), 401
+            
     except Exception as e:
-        # Cambiamos str(e) por repr(e) para obtener el nombre del error
-        return jsonify({'status': False, 'data': None, 'message': f"Error interno del servidor: {repr(e)}"}), 500
-  
+        return jsonify({'status': False, 'data': None, 'message': str(e)}), 500
+
     
 #Crear un endpoint para obtener la foto del usuario mediante su id
 @ws_usuario.route('/usuario/foto/<id>', methods=['GET'])
@@ -84,6 +89,10 @@ def registrar():
     clave = data.get('clave')
     clave_confirmada = data.get('clave_confirmada') 
     rol_id = data.get('rol_id')
+    try:
+        rol_id = int(rol_id)
+    except Exception:
+        return jsonify({'status': False, 'data': None, 'message': 'rol_id inválido'}), 400
     vehiculo_data = data.get('vehiculo') 
 
     # Validar campos obligatorios básicos

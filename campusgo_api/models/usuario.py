@@ -1,6 +1,7 @@
 from ..conexionBD import Conexion
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, InvalidHash
+import logging
 from datetime import datetime
 
 class Usuario:
@@ -9,59 +10,30 @@ class Usuario:
         self.ph = PasswordHasher()
     
     def login(self, email, clave):
-        # Abrir la conexión
+        #Abrir la conexión
         con = Conexion().open
-
-        # Crear un cursor para ejecutar la sentencia sql
+        
+        #Crear un cursor para ejecutar la sentencia sql
         cursor = con.cursor()
         
-        # === CONSULTA SQL CORREGIDA CON JOIN v2 ===
-        # Une las tablas usando 'usuario_id' como clave y devuelve
-        # el id del usuario bajo el alias 'id' para compatibilidad con el frontend.
-        sql = """
-            SELECT
-                u.id,
-                ur.rol_id,
-                CONCAT(u.nombres, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre,
-                u.email,
-                u.clave
-            FROM
-                usuario AS u
-            JOIN
-                usuario_rol AS ur ON u.id = ur.usuario_id
-            WHERE
-                u.email = %s AND ur.estado_id = 1
-            LIMIT 1
-        """
+        #Definir la sentencia sql
+        sql = "select id, concat(nombres, ' ', apellido_paterno, ' ', apellido_materno) as nombre, email, clave from usuario where email = %s"
         
         #Ejecutar la sentencia
         cursor.execute(sql,[email])
-                
-        # Recuperar los datos del usuario como una tupla
-        row = cursor.fetchone()
-
-        # Si se encontró una fila, la convertimos a diccionario
-        if row:
-            # Obtenemos los nombres de las columnas desde el cursor
-            columns = [col[0] for col in cursor.description]
-            # Creamos el diccionario combinando los nombres de columna y los valores de la fila
-            resultado = dict(zip(columns, row))
-        else:
-            resultado = None
-
+        
+        #Recuperar los datos del usuario
+        resultado = cursor.fetchone()
+        
         #Cerrar el curso y la conexión
         cursor.close()
         con.close()
-
+        
         if resultado: #Verificando si se encontró al usuario con el email ingresado
             try:
-                # Verifica la contraseña contra el hash almacenado. Si el hash
-                # está malformado (InvalidHash) lo tratamos como un fallo de
-                # autenticación para no exponer un error 500.
-                self.ph.verify(resultado['clave'], clave)
+                self.ph.verify(resultado['clave'], clave) #Verificando la clave almacenada en la BD con la clave que ingresó el usuario
                 return resultado
-            except (VerifyMismatchError, InvalidHash):
-                # Contraseña incorrecta o hash inválido -> autenticación fallida
+            except VerifyMismatchError:
                 return None
             
         else: #No se ha encontrado al usuario con el email ingreso
@@ -171,11 +143,6 @@ class Usuario:
                 con.rollback()
             # Devuelve None en caso de error
             return None, str(e)
-
-        except Exception as e:
-            if con:
-                con.rollback()
-            return False, str(e)
 
         finally:
             if cursor:
