@@ -8,29 +8,39 @@ class Usuario:
         self.ph = PasswordHasher()
         
     def login(self, email, clave):
-        #Abrir la conexión
-        con = Conexion().open   
-        cursor = con.cursor(dictionary=True)
+         #Abrir la conexión
+        con = Conexion().open
         
         #Crear un cursor para ejecutar la sentencia sql
         cursor = con.cursor()
         
-        #Definir la sentencia sql
+        #Definir la sentencia sql (Esta ya está correcta)
         sql = "select id, rol_id, concat(nombres, ' ', apellido_paterno, ' ', apellido_materno) as nombre, email, clave from usuario where email = %s"
         
         #Ejecutar la sentencia
         cursor.execute(sql,[email])
+                
+        # Recuperar los datos del usuario como una tupla
+        row = cursor.fetchone()
+
+        # Si se encontró una fila, la convertimos a diccionario
+        if row:
+            # Obtenemos los nombres de las columnas desde el cursor
+            columns = [col[0] for col in cursor.description]
+            # Creamos el diccionario combinando los nombres de columna y los valores de la fila
+            resultado = dict(zip(columns, row))
+        else:
+            resultado = None
         
-        #Recuperar los datos del usuario
-        resultado = cursor.fetchone()
-        
+
         #Cerrar el curso y la conexión
         cursor.close()
         con.close()
-        
+    
         if resultado: #Verificando si se encontró al usuario con el email ingresado
             try:
-                self.ph.verify(resultado['clave'], clave) #Verificando la clave almacenada en la BD con la clave que ingresó el usuario
+                # Ahora esto funcionará porque 'resultado' es un diccionario
+                self.ph.verify(resultado['clave'], clave) 
                 return resultado
             except VerifyMismatchError:
                 return None
