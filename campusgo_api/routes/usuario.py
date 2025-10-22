@@ -114,11 +114,6 @@ def registrar():
     if rol_id not in [1, 2]:
         return jsonify({'status': False, 'data': None, 'message': 'El rol especificado no es válido'}), 400
     
-    
-    # Opcional: Si tienes una función para validar la complejidad de la clave, úsala aquí
-    # valida, mensaje = password_validate(clave)
-    # if not valida:
-    #     return jsonify({'status': False, 'data': None, 'message': mensaje}), 400
 
     try:
         

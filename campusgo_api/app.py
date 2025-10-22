@@ -169,42 +169,6 @@ def i_am_live():
 
     return jsonify({'live_token': token}), 200
     
-    @app.route('/__version__', methods=['GET'])
-    def version():
-        """Return the contents of DEPLOY_VERSION if present (helpful to know which commit is live)."""
-        try:
-            base = os.path.dirname(__file__)
-            path = os.path.join(base, '..', 'DEPLOY_VERSION')
-            if os.path.exists(path):
-                with open(path, 'r', encoding='utf-8') as f:
-                    v = f.read().strip()
-                return jsonify({'version': v}), 200
-        except Exception:
-            pass
-        return jsonify({'version': 'unknown'}), 200
-
-
-    @app.route('/__i_am_live__', methods=['GET'])
-    def i_am_live():
-        """Return the live token printed at startup (for debugging only)."""
-        try:
-            base = os.path.dirname(__file__)
-            path = os.path.join(base, '..', 'DEPLOY_VERSION')
-            dv = None
-            if os.path.exists(path):
-                with open(path, 'r', encoding='utf-8') as f:
-                    dv = f.read().strip()
-        except Exception:
-            dv = None
-
-        token = f"{dv or 'noversion'}-unknown"
-        try:
-            token = globals().get('LIVE_TOKEN', token)
-        except Exception:
-            pass
-
-        return jsonify({'live_token': token}), 200
-
 
 #Iniciar el servicio web con Flask (solo para desarrollo local)
 if __name__ == '__main__':
