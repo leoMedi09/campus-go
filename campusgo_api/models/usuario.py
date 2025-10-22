@@ -8,16 +8,15 @@ class Usuario:
         self.ph = PasswordHasher()
     
     def login(self, email, clave):
-        #Abrir la conexión
+        # Abrir la conexión
         con = Conexion().open
-        
-        #Crear un cursor para ejecutar la sentencia sql
+
+        # Crear un cursor para ejecutar la sentencia sql
         cursor = con.cursor()
         
-        # === CONSULTA SQL CORREGIDA CON JOIN ===
-        # Une la tabla 'usuario' (alias 'u') con 'usuario_rol' (alias 'ur')
-        # para obtener el rol_id del usuario que está intentando iniciar sesión.
-        # Asume que un rol activo tiene estado_id = 1.
+        # === CONSULTA SQL CORREGIDA CON JOIN v2 ===
+        # Une las tablas usando 'usuario_id' como clave y devuelve
+        # el id del usuario bajo el alias 'id' para compatibilidad con el frontend.
         sql = """
             SELECT
                 u.id,
@@ -55,13 +54,12 @@ class Usuario:
 
         if resultado: #Verificando si se encontró al usuario con el email ingresado
             try:
-                
                 self.ph.verify(resultado['clave'], clave) 
                 return resultado
             except VerifyMismatchError:
                 return None
             
-        else: #No se ha encontrado al usuario con el email ingresado
+        else: #No se ha encontrado al usuario con el email ingreso
             return None
         
     
