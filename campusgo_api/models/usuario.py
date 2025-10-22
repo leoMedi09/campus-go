@@ -6,16 +6,33 @@ from datetime import datetime
 class Usuario:
     def __init__(self):
         self.ph = PasswordHasher()
-        
+    
     def login(self, email, clave):
-         #Abrir la conexión
+        #Abrir la conexión
         con = Conexion().open
         
         #Crear un cursor para ejecutar la sentencia sql
         cursor = con.cursor()
         
-        #Definir la sentencia sql (Esta ya está correcta)
-        sql = "select id, rol_id, concat(nombres, ' ', apellido_paterno, ' ', apellido_materno) as nombre, email, clave from usuario where email = %s"
+        # === CONSULTA SQL CORREGIDA CON JOIN ===
+        # Une la tabla 'usuario' (alias 'u') con 'usuario_rol' (alias 'ur')
+        # para obtener el rol_id del usuario que está intentando iniciar sesión.
+        # Asume que un rol activo tiene estado_id = 1.
+        sql = """
+            SELECT
+                u.id,
+                ur.rol_id,
+                CONCAT(u.nombres, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre,
+                u.email,
+                u.clave
+            FROM
+                usuario AS u
+            JOIN
+                usuario_rol AS ur ON u.id = ur.usuario_id
+            WHERE
+                u.email = %s AND ur.estado_id = 1
+            LIMIT 1
+        """
         
         #Ejecutar la sentencia
         cursor.execute(sql,[email])
@@ -31,22 +48,23 @@ class Usuario:
             resultado = dict(zip(columns, row))
         else:
             resultado = None
-        
 
         #Cerrar el curso y la conexión
         cursor.close()
         con.close()
-    
+
         if resultado: #Verificando si se encontró al usuario con el email ingresado
             try:
-                # Ahora esto funcionará porque 'resultado' es un diccionario
+                
                 self.ph.verify(resultado['clave'], clave) 
                 return resultado
             except VerifyMismatchError:
                 return None
             
-        else: #No se ha encontrado al usuario con el email ingreso
+        else: #No se ha encontrado al usuario con el email ingresado
             return None
+        
+    
         
     def obtener_foto(self,id):
         #Abrir la conexión
