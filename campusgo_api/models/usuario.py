@@ -19,7 +19,7 @@ class Usuario:
         # Definir la sentencia sql (unir con usuario_rol para obtener rol_id y filtrar estado)
         sql = (
             "SELECT u.id, CONCAT(u.nombres, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre, "
-            "u.email, u.clave, ur.rol_id "
+            "u.email, u.clave, u.foto, ur.rol_id "
             "FROM usuario AS u "
             "JOIN usuario_rol AS ur ON u.id = ur.usuario_id "
             "WHERE u.email = %s AND ur.estado_id = 1 LIMIT 1"
