@@ -3,8 +3,8 @@ import os
 
 class Config:
     DB_HOST = os.environ.get('DB_HOST', 'gateway01.us-east-1.prod.aws.tidbcloud.com')
-    DB_USER = os.environ.get('DB_USER', '2SPtcGf44WJkWDQ.root')
-    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'RH6VI8vBmUGEf30J')
+    DB_USER = os.environ.get('DB_USER', '2FaYsF4hcm2iFVK.root')
+    DB_PASSWORD = os.environ.get('DB_PASSWORD', 'KAWIpAJ29lNiPfk7')
     DB_NAME = os.environ.get('DB_NAME', 'campusgo')
     DB_PORT = int(os.environ.get('DB_PORT', 4000))
     SECRET_KEY = os.environ.get('SECRET_KEY', 'clave_secreta_para_jwt')
