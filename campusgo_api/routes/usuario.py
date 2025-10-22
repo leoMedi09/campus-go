@@ -122,7 +122,6 @@ def registrar():
         return jsonify({'status': False, 'data': None, 'message': f"Error interno del servidor: {str(e)}"}), 500
 
 
-# --- Aquí van tus otros endpoints como /login, /usuario/actualizar, etc. ---
     
 #Crear un endpoint para actualizar al usuario
 @ws_usuario.route('/usuario/actualizar', methods=['PUT'])

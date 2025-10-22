@@ -2,7 +2,6 @@ from ..conexionBD import Conexion
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from datetime import datetime
-from werkzeug.security import generate_password_hash
 
 class Usuario:
     def __init__(self):
@@ -65,94 +64,86 @@ class Usuario:
         return None
 
     def registrar(self, apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave, rol_id, vehiculo_data=None):
-            try:
-                # Inicializar recursos
-                con = None
-                cursor = None
+        try:
+            # Inicializar recursos
+            con = None
+            cursor = None
 
-                # 1. Abrir la conexión
-                con = Conexion().open
-                cursor = con.cursor()
+            # 1. Abrir la conexión
+            con = Conexion().open
+            cursor = con.cursor()
 
-                # 2. Iniciar la transacción explícitamente
-                con.begin()
+            # 2. Iniciar la transacción
+            con.begin()
 
-                # 3. Validar si el email o DNI ya existen antes de insertar
-                sql_check_existencia = "SELECT id FROM usuario WHERE email = %s OR dni = %s"
-                cursor.execute(sql_check_existencia, [email, dni])
+            # 3. Validar si el email o DNI ya existen
+            sql_check_existencia = "SELECT id FROM usuario WHERE email = %s OR dni = %s"
+            cursor.execute(sql_check_existencia, [email, dni])
+            if cursor.fetchone():
+                raise Exception("El email o DNI ya se encuentra registrado.")
+
+            # 4. Hashear la contraseña con Argon2 (ESTA ES LA CORRECCIÓN)
+            clave_hasheada = self.ph.hash(clave)
+
+            # 5. Insertar en la tabla 'usuario'
+            sql_usuario = """
+                INSERT INTO usuario (apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave, estado_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 1);
+            """
+            cursor.execute(sql_usuario, [apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave_hasheada])
+
+            # 6. Obtener el ID del usuario recién creado
+            usuario_id = cursor.lastrowid
+            if not usuario_id:
+                raise Exception("Error crítico: No se pudo obtener el ID del nuevo usuario.")
+
+            # 7. Insertar en la tabla 'usuario_rol'
+            sql_usuario_rol = """
+                INSERT INTO usuario_rol (usuario_id, rol_id, fecha_hora_asignacion, estado_id)
+                VALUES (%s, %s, %s, 1);
+            """
+            cursor.execute(sql_usuario_rol, [usuario_id, rol_id, datetime.now()])
+
+            # 8. Lógica condicional para registrar el vehículo
+            if rol_id == 2: # Asumimos que 2 es el rol_id para 'Conductor'
+                if not vehiculo_data:
+                    raise Exception("Faltan los datos del vehículo para el rol Conductor.")
+                
+                # Extraer datos del vehículo
+                marca = vehiculo_data.get('marca')
+                modelo = vehiculo_data.get('modelo')
+                placa = vehiculo_data.get('placa')
+                color = vehiculo_data.get('color')
+                pasajeros = vehiculo_data.get('pasajeros')
+
+                if not all([marca, modelo, placa, color, pasajeros]):
+                    raise Exception("Faltan datos obligatorios del vehículo (marca, modelo, placa, color, pasajeros).")
+
+                sql_check_placa = "SELECT id FROM vehiculo WHERE placa = %s"
+                cursor.execute(sql_check_placa, [placa])
                 if cursor.fetchone():
-                    raise Exception("El email o DNI ya se encuentra registrado.")
+                    raise Exception(f"La placa del vehículo '{placa}' ya se encuentra registrada.")
 
-                # 4. Hashear la contraseña antes de guardarla
-                clave_hasheada = generate_password_hash(clave, method='pbkdf2:sha256')
-
-                # 5. Insertar en la tabla 'usuario'
-                sql_usuario = """
-                    INSERT INTO usuario (apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave, estado_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, 1);
+                sql_vehiculo = """
+                    INSERT INTO vehiculo (conductor_id, marca, modelo, placa, color, pasajeros, estado_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, 1);
                 """
-                cursor.execute(sql_usuario, [apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave_hasheada])
+                cursor.execute(sql_vehiculo, [usuario_id, marca, modelo, placa, color, pasajeros])
 
-                # 6. Obtener el ID del usuario recién creado
-                usuario_id = cursor.lastrowid
-                if not usuario_id:
-                    raise Exception("Error crítico: No se pudo obtener el ID del nuevo usuario.")
+            # 9. Confirmar la transacción
+            con.commit()
+            return True, "Usuario registrado con éxito."
 
-                # 7. Insertar en la tabla 'usuario_rol'
-                sql_usuario_rol = """
-                    INSERT INTO usuario_rol (usuario_id, rol_id, fecha_hora_asignacion, estado_id)
-                    VALUES (%s, %s, %s, 1);
-                """
-                cursor.execute(sql_usuario_rol, [usuario_id, rol_id, datetime.now()])
+        except Exception as e:
+            if con:
+                con.rollback()
+            return False, str(e)
 
-                # 8. Lógica condicional para registrar el vehículo
-                if rol_id == 2: # Asumimos que 2 es el rol_id para 'Conductor'
-                    if not vehiculo_data:
-                        raise Exception("Faltan los datos del vehículo para el rol Conductor.")
-                    
-                    # Extraer datos del vehículo
-                    marca = vehiculo_data.get('marca')
-                    modelo = vehiculo_data.get('modelo')
-                    placa = vehiculo_data.get('placa')
-                    color = vehiculo_data.get('color')
-                    pasajeros = vehiculo_data.get('pasajeros')
-
-                    if not all([marca, modelo, placa, color, pasajeros]):
-                        raise Exception("Faltan datos obligatorios del vehículo (marca, modelo, placa, color, pasajeros).")
-
-                    # Validar si la placa ya existe
-                    sql_check_placa = "SELECT id FROM vehiculo WHERE placa = %s"
-                    cursor.execute(sql_check_placa, [placa])
-                    if cursor.fetchone():
-                        raise Exception(f"La placa del vehículo '{placa}' ya se encuentra registrada.")
-
-                    # Insertar en la tabla 'vehiculo'
-                    sql_vehiculo = """
-                        INSERT INTO vehiculo (conductor_id, marca, modelo, placa, color, pasajeros, estado_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, 1);
-                    """
-                    cursor.execute(sql_vehiculo, [usuario_id, marca, modelo, placa, color, pasajeros])
-
-                # 9. Si todo fue exitoso, confirmar la transacción
-                con.commit()
-                return True, "Usuario registrado con éxito."
-
-            except Exception as e:
-                # 10. Si ocurre cualquier error, revertir todos los cambios (rollback)
-                if con:
-                    try:
-                        con.rollback()
-                    except Exception as rollback_ex:
-                        # Opcional: loggear el error del rollback si también falla
-                        pass
-                return False, str(e)
-
-            finally:
-                # 11. Cerrar el cursor y la conexión de forma segura
-                if cursor:
-                    cursor.close()
-                if con:
-                    con.close()
+        finally:
+            if cursor:
+                cursor.close()
+            if con:
+                con.close()
     
     def validar_existente(self, email, dni):
         #Abrir la conexión
