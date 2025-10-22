@@ -10,20 +10,6 @@ from .conexionBD import Conexion
 import uuid
 import datetime
 from .config import Config
-import logging
-from logging.handlers import RotatingFileHandler
-
-# Configure package logger
-logger = logging.getLogger('campusgo_api')
-if not logger.handlers:
-    log_path = os.path.join(os.path.dirname(__file__), '..', 'logs', 'campusgo_api.log')
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
-    handler = RotatingFileHandler(log_path, maxBytes=2*1024*1024, backupCount=5)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
-    handler.setFormatter(formatter)
-    handler.setLevel(logging.INFO)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
 
 app = Flask(__name__)
 app.register_blueprint(ws_usuario)

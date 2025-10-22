@@ -39,6 +39,7 @@ class Usuario:
         else: #No se ha encontrado al usuario con el email ingreso
             return None
         
+        
     
         
     def obtener_foto(self,id):
