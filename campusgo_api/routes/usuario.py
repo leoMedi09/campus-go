@@ -71,10 +71,12 @@ def obtener_foto(id):
 #Crear un endpoint para registar nuevos usuarios
 @ws_usuario.route('/usuario/registrar', methods=['POST'])
 def registrar():
-    #Obtener los datos que se envian como parámetros de entrada
+    # Obtener los datos JSON que envía la aplicación Android
     data = request.get_json()
-    
-    #pasar los datos a variables
+    if not data:
+        return jsonify({'status': False, 'data': None, 'message': 'No se recibieron datos (JSON inválido)'}), 400
+
+    # Extraer datos del JSON
     apellido_paterno = data.get('apellido_paterno')
     apellido_materno = data.get('apellido_materno')
     nombres = data.get('nombres')
@@ -82,37 +84,45 @@ def registrar():
     telefono = data.get('telefono')
     email = data.get('email')
     clave = data.get('clave')
-    clave_confirmada = data.get('clave_confirmada')
+    clave_confirmada = data.get('clave_confirmada') # Solo para validación aquí
+    rol_id = data.get('rol_id')
+    vehiculo_data = data.get('vehiculo') # El objeto anidado
 
-    #Validar si contamos con los parámetros obligatorios
-    if not all([apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave, clave_confirmada]):
+    # Validar campos obligatorios básicos
+    if not all([apellido_paterno, nombres, dni, email, clave, clave_confirmada, rol_id]):
         return jsonify({'status': False, 'data': None, 'message': 'Faltan datos obligatorios'}), 400
-    
-    #Validar si las claves coinciden
+
+    # Validar que las contraseñas coincidan
     if clave != clave_confirmada:
-        return jsonify({'status': False, 'data': None, 'message': 'Las claves no coinciden'}), 500
-
-    #Validar la complejidad de la clave
-    valida, mensaje = password_validate(clave)
-    if not valida:
-        return jsonify({'status': False, 'data': None, 'message': mensaje}), 500
+        return jsonify({'status': False, 'data': None, 'message': 'Las contraseñas no coinciden'}), 400
+        
+    # Validar que rol_id sea 1 (Estudiante) o 2 (Conductor)
+    if rol_id not in [1, 2]:
+        return jsonify({'status': False, 'data': None, 'message': 'El rol especificado no es válido'}), 400
     
-    #Validar que el email y dni no estén en uso
-    valida, mensaje = usuario.validar_existente(email, dni)
-    if not valida:
-        return jsonify({'status': False, 'data': None, 'message': mensaje}), 500
+    # Opcional: Si tienes una función para validar la complejidad de la clave, úsala aquí
+    # valida, mensaje = password_validate(clave)
+    # if not valida:
+    #     return jsonify({'status': False, 'data': None, 'message': mensaje}), 400
 
-    #Registrar al usuario
     try:
-        resultado = usuario.registrar(apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave, 1)
+        
+        resultado, mensaje = usuario.registrar(
+            apellido_paterno, apellido_materno, nombres, dni, telefono, email, clave, rol_id, vehiculo_data
+        )
 
         if resultado:
-            return jsonify({'status': True, 'data': resultado, 'message': 'Usuario registrado correctamente'}), 200
+            return jsonify({'status': True, 'data': None, 'message': mensaje}), 201 # 201 Created
         else:
-            return jsonify({'status': False, 'data': None, 'message': 'Ocurrió un error al registrar al usuario'}), 500
-        
+            # Si el modelo devuelve un error (ej. DNI duplicado), lo mostramos
+            return jsonify({'status': False, 'data': None, 'message': mensaje}), 409 # 409 Conflict
+
     except Exception as e:
-        return jsonify({'status': False, 'data': None, 'message': str(e)}), 500
+        # Manejo de errores internos inesperados en el servidor
+        return jsonify({'status': False, 'data': None, 'message': f"Error interno del servidor: {str(e)}"}), 500
+
+
+# --- Aquí van tus otros endpoints como /login, /usuario/actualizar, etc. ---
     
 #Crear un endpoint para actualizar al usuario
 @ws_usuario.route('/usuario/actualizar', methods=['PUT'])
