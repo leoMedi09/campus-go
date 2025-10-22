@@ -84,9 +84,9 @@ def registrar():
     telefono = data.get('telefono')
     email = data.get('email')
     clave = data.get('clave')
-    clave_confirmada = data.get('clave_confirmada') # Solo para validación aquí
+    clave_confirmada = data.get('clave_confirmada') 
     rol_id = data.get('rol_id')
-    vehiculo_data = data.get('vehiculo') # El objeto anidado
+    vehiculo_data = data.get('vehiculo') 
 
     # Validar campos obligatorios básicos
     if not all([apellido_paterno, nombres, dni, email, clave, clave_confirmada, rol_id]):
@@ -100,6 +100,7 @@ def registrar():
     if rol_id not in [1, 2]:
         return jsonify({'status': False, 'data': None, 'message': 'El rol especificado no es válido'}), 400
     
+    
     # Opcional: Si tienes una función para validar la complejidad de la clave, úsala aquí
     # valida, mensaje = password_validate(clave)
     # if not valida:
@@ -112,10 +113,9 @@ def registrar():
         )
 
         if resultado:
-            return jsonify({'status': True, 'data': None, 'message': mensaje}), 201 # 201 Created
+            return jsonify({'status': True, 'data': { 'id': resultado }, 'message': mensaje}), 201 
         else:
-            # Si el modelo devuelve un error (ej. DNI duplicado), lo mostramos
-            return jsonify({'status': False, 'data': None, 'message': mensaje}), 409 # 409 Conflict
+            return jsonify({'status': False, 'data': None, 'message': mensaje}), 409 
 
     except Exception as e:
         # Manejo de errores internos inesperados en el servidor

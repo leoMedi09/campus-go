@@ -132,7 +132,13 @@ class Usuario:
 
             # 9. Confirmar la transacción
             con.commit()
-            return True, "Usuario registrado con éxito."
+            return usuario_id, "Usuario registrado con éxito."
+
+        except Exception as e:
+            if con:
+                con.rollback()
+            # Devuelve None en caso de error
+            return None, str(e)
 
         except Exception as e:
             if con:
