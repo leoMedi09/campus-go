@@ -44,8 +44,8 @@ def login():
             return jsonify({'status': False, 'data': None, 'message': 'Credenciales incorrectas o usuario no encontrado.'}), 401
 
     except Exception as e:
-
-        return jsonify({'status': False, 'data': None, 'message': f"Error interno del servidor: {str(e)}"}), 500
+        # Cambiamos str(e) por repr(e) para obtener el nombre del error
+        return jsonify({'status': False, 'data': None, 'message': f"Error interno del servidor: {repr(e)}"}), 500
   
     
 #Crear un endpoint para obtener la foto del usuario mediante su id
