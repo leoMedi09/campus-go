@@ -24,31 +24,38 @@ def login():
     #pasar los datos de email y clave a variables
     email = data.get('email')
     clave = data.get('clave')
+    # opcional: rol_id que la app puede enviar para cambiar de sesión
+    rol_id = data.get('rol_id')
+    try:
+        if rol_id is not None:
+            rol_id = int(rol_id)
+    except Exception:
+        return jsonify({'status': False, 'data': None, 'message': 'rol_id inválido'}), 400
     
     #Validar si contamos con los parámetros de email y clave
     if not all([email, clave]):
         return jsonify({'status': False, 'data': None, 'message': 'Faltan datos obligatorios'}), 400
     
     try:
-        #Llamar al método login
-        resultado = usuario.login(email, clave)
-        
+        #Llamar al método login, pasando rol_id si la app lo solicitó
+        resultado = usuario.login(email, clave, rol_id=rol_id)
+
         if resultado: #Si hay resultado
             #retirar la clave del resultado antes de imprimir
             resultado.pop('clave', None)
-            
+
             #Generar el token con JWT
             token = generar_token({'usuario_id': resultado['id']}, 60*60)
-            
+
             #Incliuir en el resultado el token generado
             resultado['token'] = token
-            
+
             #Imprimir el resultado
             return jsonify({'status': True, 'data': resultado, 'message':'Inicio de sesión satisfactorio'}), 200
-        
+
         else:
             return jsonify({'status': False, 'data': None, 'message': 'Credenciales incorrectas'}), 401
-            
+
     except Exception as e:
         return jsonify({'status': False, 'data': None, 'message': str(e)}), 500
 

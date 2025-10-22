@@ -9,7 +9,7 @@ class Usuario:
     def __init__(self):
         self.ph = PasswordHasher()
     
-    def login(self, email, clave):
+    def login(self, email, clave, rol_id=None):
         # Abrir la conexión
         con = Conexion().open
 
@@ -22,11 +22,19 @@ class Usuario:
             "u.email, u.clave, u.foto, ur.rol_id "
             "FROM usuario AS u "
             "JOIN usuario_rol AS ur ON u.id = ur.usuario_id "
-            "WHERE u.email = %s AND ur.estado_id = 1 LIMIT 1"
+            "WHERE u.email = %s AND ur.estado_id = 1"
         )
 
+        params = [email]
+        # Si la app envía rol_id, filtrar por él; si no, mantener LIMIT 1 para seleccionar un rol por defecto
+        if rol_id is not None:
+            sql += " AND ur.rol_id = %s"
+            params.append(rol_id)
+        else:
+            sql += " LIMIT 1"
+
         # Ejecutar la sentencia
-        cursor.execute(sql, [email])
+        cursor.execute(sql, params)
 
         # Recuperar los datos del usuario
         resultado = cursor.fetchone()
