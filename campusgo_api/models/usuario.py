@@ -9,7 +9,8 @@ class Usuario:
         
     def login(self, email, clave):
         #Abrir la conexión
-        con = Conexion().open
+        con = Conexion().open   
+        cursor = con.cursor(dictionary=True)
         
         #Crear un cursor para ejecutar la sentencia sql
         cursor = con.cursor()
