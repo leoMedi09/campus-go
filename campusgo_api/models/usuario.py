@@ -10,33 +10,49 @@ class Usuario:
         self.ph = PasswordHasher()
     
     def login(self, email, clave):
-        #Abrir la conexión
+        # Abrir la conexión
         con = Conexion().open
-        
-        #Crear un cursor para ejecutar la sentencia sql
+
+        # Crear un cursor para ejecutar la sentencia sql
         cursor = con.cursor()
-        
-        #Definir la sentencia sql
-        sql = "select id, concat(nombres, ' ', apellido_paterno, ' ', apellido_materno) as nombre, email, clave from usuario where email = %s"
-        
-        #Ejecutar la sentencia
-        cursor.execute(sql,[email])
-        
-        #Recuperar los datos del usuario
+
+        # Definir la sentencia sql (unir con usuario_rol para obtener rol_id y filtrar estado)
+        sql = (
+            "SELECT u.id, CONCAT(u.nombres, ' ', u.apellido_paterno, ' ', u.apellido_materno) AS nombre, "
+            "u.email, u.clave, ur.rol_id "
+            "FROM usuario AS u "
+            "JOIN usuario_rol AS ur ON u.id = ur.usuario_id "
+            "WHERE u.email = %s AND ur.estado_id = 1 LIMIT 1"
+        )
+
+        # Ejecutar la sentencia
+        cursor.execute(sql, [email])
+
+        # Recuperar los datos del usuario
         resultado = cursor.fetchone()
-        
-        #Cerrar el curso y la conexión
+
+        # Si el cursor devuelve una tupla (no dict), convertir usando description
+        if resultado and not isinstance(resultado, dict):
+            cols = [col[0] for col in cursor.description]
+            try:
+                resultado = dict(zip(cols, resultado))
+            except Exception:
+                # no mappeable: dejar el resultado tal cual
+                pass
+
+        # Cerrar el cursor y la conexión
         cursor.close()
         con.close()
-        
-        if resultado: #Verificando si se encontró al usuario con el email ingresado
-            try:
-                self.ph.verify(resultado['clave'], clave) #Verificando la clave almacenada en la BD con la clave que ingresó el usuario
-                return resultado
-            except VerifyMismatchError:
-                return None
-            
-        else: #No se ha encontrado al usuario con el email ingreso
+
+        if not resultado:
+            return None
+
+        # Verificar la contraseña y manejar hashes inválidos
+        try:
+            self.ph.verify(resultado.get('clave'), clave)
+            return resultado
+        except (VerifyMismatchError, InvalidHash):
+            # Credenciales inválidas o hash corrupto
             return None
         
         
