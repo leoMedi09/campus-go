@@ -50,6 +50,36 @@ class Usuario:
         # Verificar la contraseña y manejar hashes inválidos
         try:
             self.ph.verify(resultado.get('clave'), clave)
+
+            # Obtener todos los roles activos del usuario (para saber si tiene múltiples roles)
+            try:
+                con2 = Conexion().open
+                cur2 = con2.cursor()
+                sql_roles = "SELECT rol_id FROM usuario_rol WHERE usuario_id = %s AND estado_id = 1"
+                cur2.execute(sql_roles, [resultado.get('id')])
+                filas = cur2.fetchall()
+                # Normalizar a lista de ids
+                roles = []
+                if filas:
+                    # filas puede ser lista de dicts o de tuplas
+                    for r in filas:
+                        if isinstance(r, dict):
+                            roles.append(r.get('rol_id'))
+                        else:
+                            # r[0] asume la primera columna
+                            try:
+                                roles.append(r[0])
+                            except Exception:
+                                pass
+                # Cerrar
+                cur2.close()
+                con2.close()
+            except Exception:
+                roles = []
+
+            resultado['roles'] = roles
+            resultado['multiple_roles'] = len(roles) > 1
+
             return resultado
         except (VerifyMismatchError, InvalidHash):
             # Credenciales inválidas o hash corrupto
