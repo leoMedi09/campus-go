@@ -3,3 +3,5 @@ WARNING: This is a development server. Do not use it in a production deployment.
  * Running on http://127.0.0.1:3006
  * Running on http://192.168.101.12:3006
 Press CTRL+C to quit
+127.0.0.1 - - [22/Oct/2025 10:16:08] "GET /health-db HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2025 10:16:10] "POST /login HTTP/1.1" 401 -
