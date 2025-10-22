@@ -6,7 +6,7 @@ class Config:
     DB_USER = os.environ.get('DB_USER', '2FaYsF4hcm2iFVK.root')
     DB_PASSWORD = os.environ.get('DB_PASSWORD', 'KAWIpAJ29lNiPfk7')
     DB_NAME = os.environ.get('DB_NAME', 'campusgo')
-    DB_PORT = int(os.environ.get('DB_PORT', 4000))
+    DB_PORT = int(os.environ.get('DB_PORT') or 4000)
     SECRET_KEY = os.environ.get('SECRET_KEY', 'clave_secreta_para_jwt')
 
     # SSL/TLS for databases like TiDB Cloud
