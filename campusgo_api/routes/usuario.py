@@ -16,39 +16,37 @@ usuario = Usuario()
 #Crear un endpoint para permitir al usuario iniciar sesión(login)
 @ws_usuario.route('/login', methods=['POST'])
 def login():
-    #Obtener los datos que se envian como parámetros de entrada
     data = request.get_json()
-    
-    #pasar los datos de email y clave a variables
     email = data.get('email')
     clave = data.get('clave')
-    
-    #Validar si contamos con los parámetros de email y clave
+
     if not all([email, clave]):
         return jsonify({'status': False, 'data': None, 'message': 'Faltan datos obligatorios'}), 400
-    
+
+    # === INICIO DEL CAMBIO IMPORTANTE ===
     try:
-        #Llamar al método login
+        # Llamamos al método login del modelo como antes
         resultado = usuario.login(email, clave)
         
-        if resultado: #Si hay resultado
-            #retirar la clave del resultado antes de imprimir
-            resultado.pop('clave', None)
-            
-            #Generar el token con JWT
-            token = generar_token({"usuario_id": resultado['id']}, 60*60)
+        if resultado:
+            # Comprobamos si el modelo nos devolvió un error controlado (ej. contraseña incorrecta)
+            if resultado.get('error'):
+                 return jsonify({'status': False, 'data': None, 'message': resultado.get('error')}), 401
 
-            #Incluir en el resultado el token generado
+            # Si todo fue bien, generamos el token
+            resultado.pop('clave', None)
+            token = generar_token({"usuario_id": resultado['id']}, 60*60)
             resultado['token'] = token
             
-            #Imprimir el resultado
             return jsonify({'status': True, 'data': resultado, 'message':'Inicio de sesión satisfactorio'}), 200
         
-        else:
-            return jsonify({'status': False, 'data': None, 'message': 'Credenciales incorrectas'}), 401
-            
+        else: # Si el resultado es None, significa que el usuario no se encontró
+            return jsonify({'status': False, 'data': None, 'message': 'Credenciales incorrectas o usuario no encontrado.'}), 401
+
     except Exception as e:
-        return jsonify({'status': False, 'data': None, 'message': str(e)}), 500
+
+        return jsonify({'status': False, 'data': None, 'message': f"Error interno del servidor: {str(e)}"}), 500
+  
     
 #Crear un endpoint para obtener la foto del usuario mediante su id
 @ws_usuario.route('/usuario/foto/<id>', methods=['GET'])
