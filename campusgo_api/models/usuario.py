@@ -1,9 +1,10 @@
 from ..conexionBD import Conexion
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
+from argon2.exceptions import VerifyMismatchError, InvalidHash
 from datetime import datetime
 
 class Usuario:
+
     def __init__(self):
         self.ph = PasswordHasher()
     
@@ -54,9 +55,13 @@ class Usuario:
 
         if resultado: #Verificando si se encontró al usuario con el email ingresado
             try:
-                self.ph.verify(resultado['clave'], clave) 
+                # Verifica la contraseña contra el hash almacenado. Si el hash
+                # está malformado (InvalidHash) lo tratamos como un fallo de
+                # autenticación para no exponer un error 500.
+                self.ph.verify(resultado['clave'], clave)
                 return resultado
-            except VerifyMismatchError:
+            except (VerifyMismatchError, InvalidHash):
+                # Contraseña incorrecta o hash inválido -> autenticación fallida
                 return None
             
         else: #No se ha encontrado al usuario con el email ingreso
@@ -304,7 +309,7 @@ class Usuario:
         #Verificar la clave actual
         try:
             self.ph.verify(hash_guardado, clave)
-        except VerifyMismatchError:
+        except (VerifyMismatchError, InvalidHash):
             cursor.close()
             con.close()
             return False, "La clave actual es incorrecta"

@@ -59,7 +59,7 @@ class Conexion:
                 # reliably negotiates TLS with ssl={'ca': path} in this runtime.
                 # Build args for pymysql (it expects 'password' not 'passwd').
                 try:
-                    # First attempt: use CA file path
+                    # First attempt: use CA file path (strict verification)
                     pymysql_kwargs = dict(
                         host=Config.DB_HOST,
                         user=Config.DB_USER,
@@ -102,9 +102,43 @@ class Conexion:
                 except Exception:
                     # fallback to MySQLdb connector if pymysql fails for any other reason
                     connect_kwargs['ssl'] = {'ca': ca_path}
+            else:
+                # No CA available but SSL is requested. Try pymysql with SSL
+                # verification disabled as a last-resort fallback (less secure).
+                try:
+                    pymysql_kwargs_fallback = dict(
+                        host=Config.DB_HOST,
+                        user=Config.DB_USER,
+                        password=Config.DB_PASSWORD,
+                        db=Config.DB_NAME,
+                        port=Config.DB_PORT,
+                        cursorclass=dbc.cursors.DictCursor,
+                        ssl={'check_hostname': False, 'verify_mode': ssl.CERT_NONE}
+                    )
+                    self.dblink = pymysql.connect(**pymysql_kwargs_fallback)
+                    return
+                except dbc.OperationalError as auth_err:
+                    if '1105' in str(auth_err) or 'Access denied' in str(auth_err):
+                        raise Exception(f"Database authentication failed: {auth_err}. "
+                                        "Check DB_USER and DB_PASSWORD environment variables. "
+                                        "TiDB Cloud requires user format: <prefix>.<username>")
+                    raise
+                except Exception as e:
+                    # Could not connect via pymysql with insecure SSL; provide
+                    # a helpful error explaining that a CA or proper SSL is needed.
+                    raise Exception(f"Failed to establish SSL connection to DB (no CA provided): {e}. "
+                                    "Provide a valid DB_SSL_CA_B64 or DB_SSL_CA_PATH environment variable.")
 
-        # Default: use MySQLdb (mysqlclient) shim
-        self.dblink = dbc.connect(**connect_kwargs)
+        # Default: use MySQLdb (mysqlclient) shim only if ssl args are present
+        if 'ssl' in connect_kwargs:
+            self.dblink = dbc.connect(**connect_kwargs)
+        else:
+            # If we reach here and SSL was requested but no successful
+            # connection was made above, raise an informative error instead
+            # of attempting an insecure non-SSL connection that TiDB Cloud will
+            # reject with 1105.
+            raise Exception("Database requires SSL but no CA could be loaded and all SSL connection attempts failed. "
+                            "Set DB_SSL_CA_B64 or DB_SSL_CA_PATH to a valid CA certificate.")
 
     @property
     def open(self):
