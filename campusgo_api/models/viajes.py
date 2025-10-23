@@ -4,7 +4,7 @@ from datetime import datetime
 
 class Viaje:
     def listarViajes(self, filtros):
-        db = Conexion().open()  # Asegúrate de usar paréntesis si open es un método
+        db = Conexion().open
         cursor = db.cursor(pymysql.cursors.DictCursor)
 
         query = """
@@ -34,7 +34,7 @@ class Viaje:
 
         params = []
 
-        # -------------------- Filtros --------------------
+        
         campo_busqueda = filtros.get("campo_busqueda")
         texto_busqueda = filtros.get("texto_busqueda")
 
@@ -67,14 +67,14 @@ class Viaje:
 
         query += " ORDER BY v.fecha_hora_salida ASC"
 
-        # -------------------- Ejecución --------------------
+        
         cursor.execute(query, params)
         viajes = cursor.fetchall()
 
         cursor.close()
         db.close()
 
-        # -------------------- Formatear salida --------------------
+        
         resultado = {"data": []}
 
         for v in viajes:
