@@ -33,3 +33,6 @@ class Config:
         except Exception as e:
             print(f"⚠️ Error decodificando DB_SSL_CA_B64: {e}")
             DB_SSL_CA_PATH = None
+
+    # ⚙️ NUEVO: controla si se exponen las rutas de debug
+    EXPOSE_DEBUG_ROUTES = os.environ.get('EXPOSE_DEBUG_ROUTES', 'True').lower() in ('1', 'true', 'yes')
