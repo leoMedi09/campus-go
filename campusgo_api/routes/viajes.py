@@ -16,7 +16,7 @@ def listar_viajes():
         if not filtros:
             return jsonify({"error": "No se proporcionaron filtros"}), 400
         
-        resultado = viaje.filtrar_viajes(filtros)
+        resultado = viaje.listarViajes(filtros)
         
         return jsonify(resultado), 200
     
