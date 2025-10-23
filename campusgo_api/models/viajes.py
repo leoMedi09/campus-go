@@ -1,10 +1,11 @@
 from ..conexionBD import Conexion
+import pymysql.cursors
 
 class Viaje:
     
     def listarViajes(self, filtros):
         db = Conexion().open
-        cursor = db.cursor(dictionary=True)
+        cursor = db.cursor(pymysql.cursors.DictCursor)
 
         query = """
             SELECT 
