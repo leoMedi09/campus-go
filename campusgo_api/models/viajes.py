@@ -1,10 +1,10 @@
 from ..conexionBD import Conexion
 import pymysql.cursors
+from datetime import datetime
 
 class Viaje:
-    
     def listarViajes(self, filtros):
-        db = Conexion().open
+        db = Conexion().open()  # Asegúrate de usar paréntesis si open es un método
         cursor = db.cursor(pymysql.cursors.DictCursor)
 
         query = """
@@ -40,22 +40,30 @@ class Viaje:
 
         if campo_busqueda and texto_busqueda:
             if campo_busqueda in ["punto_partida", "destino"]:
-                query += f" AND v.{campo_busqueda} LIKE %s"
-                params.append(f"%{texto_busqueda}%")
+                query += f" AND LOWER(v.{campo_busqueda}) LIKE %s"
+                params.append(f"%{texto_busqueda.lower()}%")
 
-        if filtros.get("asientos_disponibles") in [True, "true", "1", 1]:
+        if str(filtros.get("asientos_disponibles")).lower() in ["true", "1"]:
             query += " AND v.asientos_disponibles > 0"
 
-        if filtros.get("sin_restricciones") in [True, "true", "1", 1]:
-            query += " AND (v.restricciones IS NULL OR v.restricciones = '')"
+        if str(filtros.get("sin_restricciones")).lower() in ["true", "1"]:
+            query += " AND (v.restricciones IS NULL OR TRIM(v.restricciones) = '' OR LOWER(v.restricciones) = 'ninguna')"
 
         if filtros.get("desde"):
-            query += " AND v.fecha_hora_salida >= %s"
-            params.append(filtros["desde"])
+            try:
+                desde = datetime.strptime(filtros["desde"], "%Y/%m/%d").strftime("%Y-%m-%d")
+                query += " AND DATE(v.fecha_hora_salida) >= %s"
+                params.append(desde)
+            except ValueError:
+                pass
 
         if filtros.get("hasta"):
-            query += " AND v.fecha_hora_salida <= %s"
-            params.append(filtros["hasta"])
+            try:
+                hasta = datetime.strptime(filtros["hasta"], "%Y/%m/%d").strftime("%Y-%m-%d")
+                query += " AND DATE(v.fecha_hora_salida) <= %s"
+                params.append(hasta)
+            except ValueError:
+                pass
 
         query += " ORDER BY v.fecha_hora_salida ASC"
 
@@ -67,9 +75,7 @@ class Viaje:
         db.close()
 
         # -------------------- Formatear salida --------------------
-        resultado = {
-            "data": []
-        }
+        resultado = {"data": []}
 
         for v in viajes:
             viaje = {
@@ -93,7 +99,6 @@ class Viaje:
                     "color": v["color"]
                 }
             }
-
             resultado["data"].append(viaje)
 
         return resultado
