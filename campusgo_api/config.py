@@ -1,5 +1,6 @@
 import os
-
+import base64
+import tempfile
 
 class Config:
     DB_HOST = os.environ.get('DB_HOST', 'gateway01.us-east-1.prod.aws.tidbcloud.com')
@@ -9,24 +10,26 @@ class Config:
     DB_PORT = int(os.environ.get('DB_PORT') or 4000)
     SECRET_KEY = os.environ.get('SECRET_KEY', 'clave_secreta_para_jwt')
 
-    # SSL/TLS for databases like TiDB Cloud
-    # Set DB_USE_SSL to 'true' (case-insensitive) to enable SSL verification.
+    # SSL/TLS
     DB_USE_SSL = str(os.environ.get('DB_USE_SSL', 'true')).lower() in ('1', 'true', 'yes')
-    # You can provide the CA certificate either as a file path in DB_SSL_CA_PATH
-    # or as a base64-encoded PEM string in DB_SSL_CA_B64.
-    DB_SSL_CA_PATH = os.environ.get('DB_SSL_CA_PATH', '')
-    
-    # Default: read CA from db_ssl_ca_b64.txt if present and env var not set
-    _default_ca_b64 = ''
-    if not os.environ.get('DB_SSL_CA_B64'):
-        _ca_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'db_ssl_ca_b64.txt')
-        if os.path.exists(_ca_file_path):
-            try:
-                with open(_ca_file_path, 'r') as f:
-                    _default_ca_b64 = f.read().strip()
-            except Exception:
-                pass
-    DB_SSL_CA_B64 = os.environ.get('DB_SSL_CA_B64', _default_ca_b64)
 
-    # Controls whether temporary debug endpoints are exposed (default: False)
-    EXPOSE_DEBUG_ROUTES = str(os.environ.get('EXPOSE_DEBUG_ROUTES', 'false')).lower() in ('1', 'true', 'yes')
+    # Leer CA desde variable o archivo
+    DB_SSL_CA_B64 = os.environ.get('DB_SSL_CA_B64', '')
+    if not DB_SSL_CA_B64:
+        ca_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'db_ssl_ca_b64.txt')
+        if os.path.exists(ca_file_path):
+            with open(ca_file_path, 'r') as f:
+                DB_SSL_CA_B64 = f.read().strip()
+
+    # Crear archivo temporal para el certificado
+    DB_SSL_CA_PATH = None
+    if DB_SSL_CA_B64:
+        try:
+            decoded_bytes = base64.b64decode(DB_SSL_CA_B64)
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pem")
+            temp_file.write(decoded_bytes)
+            temp_file.close()
+            DB_SSL_CA_PATH = temp_file.name
+        except Exception as e:
+            print(f"⚠️ Error decodificando DB_SSL_CA_B64: {e}")
+            DB_SSL_CA_PATH = None
