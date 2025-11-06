@@ -87,7 +87,8 @@ class Viaje:
                 SELECT DISTINCT
                     rv.viaje_id,
                     u.id AS usuario_id,
-                    u.foto
+                    u.foto,
+                    r.fecha_reserva
                 FROM reserva_viaje rv
                 JOIN reserva r ON rv.reserva_id = r.id
                 JOIN usuario u ON r.pasajero_id = u.id
