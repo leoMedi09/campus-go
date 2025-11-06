@@ -63,7 +63,12 @@ class Usuario:
             try:
                 con2 = Conexion().open
                 cur2 = con2.cursor()
-                sql_roles = "SELECT rol_id FROM usuario_rol WHERE usuario_id = %s AND estado_id = 1"
+                sql_roles = """
+                    SELECT ur.rol_id, r.nombre AS nombre_rol
+                    FROM usuario_rol ur
+                    JOIN rol r ON ur.rol_id = r.id
+                    WHERE ur.usuario_id = %s AND ur.estado_id = 1
+                """
                 cur2.execute(sql_roles, [resultado.get('id')])
                 filas = cur2.fetchall()
                 # Normalizar a lista de ids
@@ -72,8 +77,10 @@ class Usuario:
                     # filas puede ser lista de dicts o de tuplas
                     for r in filas:
                         if isinstance(r, dict):
-                            'rol_id': r.get('rol_id')
-                            'nombre_rol': r.get('nombre_rol')
+                            roles.append({
+                                'rol_id': r.get('rol_id'),
+                                'nombre_rol': r.get('nombre_rol')
+                            })
                         else:
                             # r[0] asume la primera columna
                             try:
