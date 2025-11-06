@@ -34,7 +34,7 @@ class Viaje:
                 u.foto AS foto_conductor
             FROM viaje v
             JOIN vehiculo veh ON v.vehiculo_id = veh.id
-            JOIN usuario u ON veh.usuario_id = u.id
+            JOIN usuario u ON veh.conductor_id = u.id
             JOIN estado e ON v.estado_id = e.id
             WHERE 1=1
         """
