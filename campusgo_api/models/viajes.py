@@ -156,3 +156,81 @@ class Viaje:
             resultado["data"].append(viaje)
 
         return resultado
+
+    def registrar(self, vehiculo_id, punto_partida, destino, lat_partida, lng_partida, 
+                  lat_destino, lng_destino, fecha_hora_salida, asientos_ofertados, 
+                  restricciones, estado_id):
+        """Registrar un nuevo viaje"""
+        try:
+            db = Conexion().open
+            cursor = db.cursor()
+            
+            # Validar que el vehículo existe y pertenece a un conductor activo
+            sql_validar_vehiculo = """
+                SELECT v.id, v.conductor_id, u.estado_id
+                FROM vehiculo v
+                JOIN usuario u ON v.conductor_id = u.id
+                WHERE v.id = %s AND v.estado_id = 1 AND u.estado_id = 1
+            """
+            cursor.execute(sql_validar_vehiculo, [vehiculo_id])
+            vehiculo_data = cursor.fetchone()
+            
+            if not vehiculo_data:
+                return False, "El vehículo no existe o no está disponible"
+            
+            # Validar que la fecha de salida sea futura
+            try:
+                fecha_salida = datetime.strptime(fecha_hora_salida, "%Y-%m-%d %H:%M:%S")
+                if fecha_salida <= datetime.now():
+                    return False, "La fecha y hora de salida debe ser futura"
+            except ValueError:
+                return False, "Formato de fecha inválido. Use: YYYY-MM-DD HH:MM:SS"
+            
+            # Validar que asientos_ofertados sea mayor a 0
+            if asientos_ofertados <= 0:
+                return False, "Debe ofrecer al menos 1 asiento"
+            
+            # Insertar el viaje
+            sql_insertar = """
+                INSERT INTO viaje (
+                    vehiculo_id, punto_partida, destino, 
+                    lat_partida, lng_partida, lat_destino, lng_destino,
+                    fecha_hora_salida, asientos_ofertados, asientos_disponibles,
+                    restricciones, estado_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            
+            # Los asientos disponibles inicialmente son iguales a los ofertados
+            asientos_disponibles = asientos_ofertados
+            
+            cursor.execute(sql_insertar, [
+                vehiculo_id, punto_partida, destino,
+                lat_partida, lng_partida, lat_destino, lng_destino,
+                fecha_hora_salida, asientos_ofertados, asientos_disponibles,
+                restricciones, estado_id
+            ])
+            
+            viaje_id = cursor.lastrowid
+            db.commit()
+            cursor.close()
+            db.close()
+            
+            return True, f"Viaje registrado exitosamente con ID: {viaje_id}"
+            
+        except Exception as e:
+            if db:
+                try:
+                    db.rollback()
+                except:
+                    pass
+            if cursor:
+                try:
+                    cursor.close()
+                except:
+                    pass
+            if db:
+                try:
+                    db.close()
+                except:
+                    pass
+            return False, f"Error al registrar el viaje: {str(e)}"
