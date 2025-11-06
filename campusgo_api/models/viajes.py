@@ -1,13 +1,13 @@
 from ..conexionBD import Conexion
 import pymysql.cursors
 from datetime import datetime
-import os
 
 class Viaje:
     def listarViajes(self, filtros):
         db = Conexion().open
         cursor = db.cursor(pymysql.cursors.DictCursor)
 
+        # Consulta principal: viajes + vehículo + conductor + estado
         query = """
             SELECT 
                 v.id AS viaje_id,
@@ -27,19 +27,21 @@ class Viaje:
                 veh.modelo,
                 veh.placa,
                 veh.color,
+                u.id AS conductor_id,
                 u.nombres,
                 u.apellido_paterno,
                 u.apellido_materno,
-                u.foto
+                u.foto AS foto_conductor
             FROM viaje v
             JOIN vehiculo veh ON v.vehiculo_id = veh.id
-            JOIN estado e ON v.estado_id = e.id
             JOIN usuario u ON veh.usuario_id = u.id
+            JOIN estado e ON v.estado_id = e.id
             WHERE 1=1
         """
 
         params = []
 
+        # Filtros dinámicos
         campo_busqueda = filtros.get("campo_busqueda")
         texto_busqueda = filtros.get("texto_busqueda")
 
@@ -74,20 +76,54 @@ class Viaje:
 
         cursor.execute(query, params)
         viajes = cursor.fetchall()
+
+        # Obtener IDs para buscar pasajeros
+        viaje_ids = [v["viaje_id"] for v in viajes] if viajes else []
+
+        pasajeros_por_viaje = {}
+        if viaje_ids:
+            placeholders = ','.join(['%s'] * len(viaje_ids))
+            query_pasajeros = f"""
+                SELECT DISTINCT
+                    rv.viaje_id,
+                    u.id AS usuario_id,
+                    u.foto
+                FROM reserva_viaje rv
+                JOIN reserva r ON rv.reserva_id = r.id
+                JOIN usuario u ON r.pasajero_id = u.id
+                WHERE rv.viaje_id IN ({placeholders})
+                ORDER BY rv.viaje_id, r.fecha_reserva DESC
+            """
+            cursor.execute(query_pasajeros, viaje_ids)
+            pasajeros_data = cursor.fetchall()
+            
+            for p in pasajeros_data:
+                viaje_id = p["viaje_id"]
+                pasajeros_por_viaje.setdefault(viaje_id, []).append(p)
+
         cursor.close()
         db.close()
 
-        # Construcción de resultado con URL de foto
+        # Construir URLs completas de fotos
+        base_url = "https://campusgo-api.onrender.com"  # o http://192.168.1.X:3006 si estás local
         resultado = {"data": []}
-        base_url = "https://campusgo-api.onrender.com"
 
         for v in viajes:
-            # Obtener ruta completa de la foto
-            foto_path = v["foto"] if v["foto"] else "uploads/fotos/usuarios/default.png"
-            if not foto_path.startswith("http"):
-                foto_url = f"{base_url}/{foto_path}"
-            else:
-                foto_url = foto_path
+            # Foto del conductor
+            foto_conductor = v["foto_conductor"] or "uploads/fotos/usuarios/default.png"
+            if not foto_conductor.startswith("http"):
+                foto_conductor = f"{base_url}/{foto_conductor}"
+
+            # Fotos de pasajeros
+            pasajeros = pasajeros_por_viaje.get(v["viaje_id"], [])
+            pasajeros_fotos = []
+            for p in pasajeros:
+                foto_path = p["foto"] or "uploads/fotos/usuarios/default.png"
+                if not foto_path.startswith("http"):
+                    foto_url = f"{base_url}/{foto_path}"
+                else:
+                    foto_url = foto_path
+                pasajeros_fotos.append(foto_url)
 
             viaje = {
                 "viaje_id": v["viaje_id"],
@@ -110,9 +146,11 @@ class Viaje:
                     "color": v["color"]
                 },
                 "conductor": {
+                    "id": v["conductor_id"],
                     "nombre": f"{v['nombres']} {v['apellido_paterno']} {v['apellido_materno']}",
-                    "foto": foto_url
-                }
+                    "foto": foto_conductor
+                },
+                "pasajeros_fotos": pasajeros_fotos
             }
             resultado["data"].append(viaje)
 

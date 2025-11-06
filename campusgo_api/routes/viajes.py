@@ -9,16 +9,28 @@ ws_viaje = Blueprint('ws_viaje', __name__)
 viaje= Viaje()
 
 @ws_viaje.route('/viajes/filtrar', methods=['POST'])
+ 
 def listar_viajes():
     try:
         filtros = request.get_json()
         
         if not filtros:
-            return jsonify({"error": "No se proporcionaron filtros"}), 400
+            return jsonify({
+                "status": False,
+                "message": "No se proporcionaron filtros"
+            }), 400
         
         resultado = viaje.listarViajes(filtros)
         
-        return jsonify(resultado), 200
-    
+        return jsonify({
+            "status": True,
+            "data": resultado["data"]
+        }), 200
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error en listar_viajes: {e}")
+        return jsonify({
+            "status": False,
+            "data": None,
+            "message": f"Error interno: {str(e)}"
+        }), 500
