@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 # Use package-relative imports so the app can be loaded by gunicorn
 from .routes.usuario import ws_usuario
 from .routes.vehiculo import ws_vehiculo
@@ -18,6 +18,15 @@ app.register_blueprint(ws_vehiculo)
 app.register_blueprint(ws_reserva)
 app.register_blueprint(ws_viaje)
 
+
+@app.route('/uploads/fotos/usuarios/<path:filename>')
+def serve_user_photos(filename):
+    """
+    Permite acceder a las fotos del usuario desde la app móvil o navegador.
+    Ejemplo: http://192.168.1.X:3006/uploads/fotos/usuarios/perfil1.jpg
+    """
+    uploads_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'fotos', 'usuarios')
+    return send_from_directory(uploads_dir, filename)
 
 
 def home():

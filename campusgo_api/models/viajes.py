@@ -1,6 +1,7 @@
 from ..conexionBD import Conexion
 import pymysql.cursors
 from datetime import datetime
+import os
 
 class Viaje:
     def listarViajes(self, filtros):
@@ -25,16 +26,20 @@ class Viaje:
                 veh.marca,
                 veh.modelo,
                 veh.placa,
-                veh.color
+                veh.color,
+                u.nombres,
+                u.apellido_paterno,
+                u.apellido_materno,
+                u.foto
             FROM viaje v
             JOIN vehiculo veh ON v.vehiculo_id = veh.id
             JOIN estado e ON v.estado_id = e.id
+            JOIN usuario u ON veh.usuario_id = u.id
             WHERE 1=1
         """
 
         params = []
 
-        
         campo_busqueda = filtros.get("campo_busqueda")
         texto_busqueda = filtros.get("texto_busqueda")
 
@@ -67,17 +72,23 @@ class Viaje:
 
         query += " ORDER BY v.fecha_hora_salida ASC"
 
-        
         cursor.execute(query, params)
         viajes = cursor.fetchall()
-
         cursor.close()
         db.close()
 
-        
+        # Construcción de resultado con URL de foto
         resultado = {"data": []}
+        base_url = "https://campusgo-api.onrender.com"
 
         for v in viajes:
+            # Obtener ruta completa de la foto
+            foto_path = v["foto"] if v["foto"] else "uploads/fotos/usuarios/default.png"
+            if not foto_path.startswith("http"):
+                foto_url = f"{base_url}/{foto_path}"
+            else:
+                foto_url = foto_path
+
             viaje = {
                 "viaje_id": v["viaje_id"],
                 "destino": v["destino"],
@@ -89,7 +100,7 @@ class Viaje:
                 "fecha_hora_salida": v["fecha_hora_salida"].strftime("%d-%m-%Y %H:%M:%S"),
                 "asientos_ofertados": v["asientos_ofertados"],
                 "asientos_disponibles": v["asientos_disponibles"],
-                "restricciones": v["restricciones"],
+                "restricciones": v["restricciones"] or "Ninguna",
                 "estado": v["estado"],
                 "vehiculo": {
                     "id": v["vehiculo_id"],
@@ -97,6 +108,10 @@ class Viaje:
                     "modelo": v["modelo"],
                     "placa": v["placa"],
                     "color": v["color"]
+                },
+                "conductor": {
+                    "nombre": f"{v['nombres']} {v['apellido_paterno']} {v['apellido_materno']}",
+                    "foto": foto_url
                 }
             }
             resultado["data"].append(viaje)
