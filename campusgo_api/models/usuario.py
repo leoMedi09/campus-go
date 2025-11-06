@@ -72,11 +72,12 @@ class Usuario:
                     # filas puede ser lista de dicts o de tuplas
                     for r in filas:
                         if isinstance(r, dict):
-                            roles.append(r.get('rol_id'))
+                            'rol_id': r.get('rol_id')
+                            'nombre_rol': r.get('nombre_rol')
                         else:
                             # r[0] asume la primera columna
                             try:
-                                roles.append(r[0])
+                                roles.append({'rol_id': r[0], 'nombre_rol': r[1]})
                             except Exception:
                                 pass
                 # Cerrar
@@ -87,6 +88,9 @@ class Usuario:
 
             resultado['roles'] = roles
             resultado['multiple_roles'] = len(roles) > 1
+            
+            # Eliminar rol_id del resultado (ya está en el array roles)
+            resultado.pop('rol_id', None)
 
             return resultado
         except (VerifyMismatchError, InvalidHash):
