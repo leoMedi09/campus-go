@@ -1,4 +1,5 @@
 from ..conexionBD import Conexion
+import pymysql
 
 class Vehiculo:
        
@@ -40,4 +41,28 @@ class Vehiculo:
         
         #Retonar al final true
         return True, 'ok'
-        
+    
+    def listar_por_conductor(self, conductor_id):
+        con = Conexion().open
+        cursor = con.cursor(pymysql.cursors.DictCursor)
+        try:
+            sql = """
+                SELECT id, marca, modelo, placa, color, pasajeros
+                FROM vehiculo
+                WHERE conductor_id = %s AND estado_id = 1
+                ORDER BY marca, modelo, placa
+            """
+            cursor.execute(sql, [conductor_id])
+            datos = cursor.fetchall() or []
+            return True, datos
+        except Exception as e:
+            return False, str(e)
+        finally:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+            try:
+                con.close()
+            except Exception:
+                pass

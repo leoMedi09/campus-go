@@ -38,3 +38,15 @@ def registrar():
     except Exception as e:
         return jsonify({'status': False, 'data': None, 'message': str(e)}), 500
     
+
+@ws_vehiculo.route('/vehiculo/listar/<int:conductor_id>', methods=['GET'])
+@jwt_token_requerido
+def listar_por_conductor(conductor_id):
+    try:
+        resultado, datos = vehiculo.listar_por_conductor(conductor_id)
+        if resultado:
+            return jsonify({'status': True, 'data': datos, 'message': 'Vehículos listados'}), 200
+        else:
+            return jsonify({'status': False, 'data': None, 'message': datos}), 400
+    except Exception as e:
+        return jsonify({'status': False, 'data': None, 'message': str(e)}), 500
