@@ -61,22 +61,22 @@ def login():
 
     
 #Crear un endpoint para obtener la foto del usuario mediante su id
-@ws_usuario.route('/usuario/foto/<id>', methods=['GET'])
-@jwt_token_requerido
-def obtener_foto(id):
-
-    #Validar si se cuenta con el id para mostrar la foto
-    if not all([id]):
-        return jsonify({'status': False, 'data': None, 'message': 'Faltan datos obligatorios'}), 400
-    
+@ws_usuario.route('/usuario/foto/<int:id>', methods=['GET'])
+def obtener_foto_usuario(id):
     try:
-        resultado = usuario.obtener_foto(id)
-        if resultado:
-            return send_from_directory('uploads/fotos/usuarios', resultado['foto'])
-        else:
-            return send_from_directory('uploads/fotos/usuarios', 'default.png')
+        ruta_base = os.path.join(os.getcwd(), 'campusgo_api', 'uploads', 'fotos', 'usuarios')
+        nombre_archivo = f"{id}.jpg"
+        ruta_foto = os.path.join(ruta_base, nombre_archivo)
+
+        if not os.path.exists(ruta_foto):
+            ruta_foto = os.path.join(ruta_base, 'default.png')
+
+        return send_from_directory(ruta_base, os.path.basename(ruta_foto))
+
     except Exception as e:
-        return jsonify({'status': False, 'data': None, 'message': str(e)}), 500
+        print(f"Error al obtener foto: {e}")
+        ruta_base = os.path.join(os.getcwd(), 'campusgo_api', 'uploads', 'fotos', 'usuarios')
+        return send_from_directory(ruta_base, 'default.png')
 
 #Crear un endpoint para registar nuevos usuarios
 @ws_usuario.route('/usuario/registrar', methods=['POST'])
