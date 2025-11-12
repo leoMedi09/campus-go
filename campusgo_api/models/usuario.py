@@ -71,30 +71,44 @@ class Usuario:
                 """
                 cur2.execute(sql_roles, [resultado.get('id')])
                 filas = cur2.fetchall()
-                # Normalizar a lista de ids
-                roles = []
+                roles_ids = []
+                roles_detalle = []
                 if filas:
                     # filas puede ser lista de dicts o de tuplas
                     for r in filas:
                         if isinstance(r, dict):
-                            roles.append({
-                                'rol_id': r.get('rol_id'),
-                                'nombre_rol': r.get('nombre_rol')
-                            })
+                            rol_id_actual = r.get('rol_id')
+                            nombre_rol = r.get('nombre_rol')
                         else:
                             # r[0] asume la primera columna
                             try:
-                                roles.append({'rol_id': r[0], 'nombre_rol': r[1]})
+                                rol_id_actual, nombre_rol = r[0], r[1]
                             except Exception:
-                                pass
+                                continue
+
+                        if rol_id_actual is None:
+                            continue
+
+                        try:
+                            rol_id_int = int(rol_id_actual)
+                        except (ValueError, TypeError):
+                            continue
+
+                        roles_ids.append(rol_id_int)
+                        roles_detalle.append({
+                            'rol_id': rol_id_int,
+                            'nombre_rol': nombre_rol
+                        })
                 # Cerrar
                 cur2.close()
                 con2.close()
             except Exception:
-                roles = []
+                roles_ids = []
+                roles_detalle = []
 
-            resultado['roles'] = roles
-            resultado['multiple_roles'] = len(roles) > 1
+            resultado['roles'] = roles_ids
+            resultado['roles_detalle'] = roles_detalle
+            resultado['multiple_roles'] = len(roles_ids) > 1
             
             # Eliminar rol_id del resultado (ya está en el array roles)
             resultado.pop('rol_id', None)
