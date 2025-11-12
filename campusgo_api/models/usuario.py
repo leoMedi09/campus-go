@@ -45,7 +45,6 @@ class Usuario:
             try:
                 resultado = dict(zip(cols, resultado))
             except Exception:
-                # no mappeable: dejar el resultado tal cual
                 pass
 
         # Cerrar el cursor y la conexión
@@ -58,6 +57,9 @@ class Usuario:
         # Verificar la contraseña y manejar hashes inválidos
         try:
             self.ph.verify(resultado.get('clave'), clave)
+
+            # ✅ GUARDAR EL ROL_ID ANTES DE OBTENER TODOS LOS ROLES
+            rol_id_principal = resultado.get('rol_id')
 
             # Obtener todos los roles activos del usuario (para saber si tiene múltiples roles)
             try:
@@ -74,13 +76,11 @@ class Usuario:
                 roles_ids = []
                 roles_detalle = []
                 if filas:
-                    # filas puede ser lista de dicts o de tuplas
                     for r in filas:
                         if isinstance(r, dict):
                             rol_id_actual = r.get('rol_id')
                             nombre_rol = r.get('nombre_rol')
                         else:
-                            # r[0] asume la primera columna
                             try:
                                 rol_id_actual, nombre_rol = r[0], r[1]
                             except Exception:
@@ -99,7 +99,6 @@ class Usuario:
                             'rol_id': rol_id_int,
                             'nombre_rol': nombre_rol
                         })
-                # Cerrar
                 cur2.close()
                 con2.close()
             except Exception:
@@ -109,9 +108,15 @@ class Usuario:
             resultado['roles'] = roles_ids
             resultado['roles_detalle'] = roles_detalle
             resultado['multiple_roles'] = len(roles_ids) > 1
+            resultado['roles_count'] = len(roles_ids)
             
-            # Eliminar rol_id del resultado (ya está en el array roles)
-            resultado.pop('rol_id', None)
+            # ✅ MANTENER EL ROL_ID EN EL RESULTADO (NO ELIMINARLO)
+            # Si se solicitó un rol específico, usar ese. Si no, usar el primero encontrado
+            if rol_id_principal is not None:
+                resultado['rol_id'] = int(rol_id_principal)
+            else:
+                # Fallback: usar el primer rol si no hay uno específico
+                resultado['rol_id'] = roles_ids[0] if roles_ids else 0
 
             return resultado
         except (VerifyMismatchError, InvalidHash):
